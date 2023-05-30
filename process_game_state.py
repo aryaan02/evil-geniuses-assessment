@@ -5,7 +5,6 @@ import matplotlib.path as mpath
 class ProcessGameState:
     def __init__(self, file_path):
         self.data = self.__ingest_data(file_path)
-        # self.weapon_classes = self.get_weapon_classes()
 
     def __ingest_data(self, file_path):
 
@@ -47,7 +46,13 @@ class ProcessGameState:
             and point[1] >= boundary['y_min'] and point[1] <= boundary['y_max'] \
             and point[2] >= boundary['z_min'] and point[2] <= boundary['z_max']
 
-    def check_boundaries(self, xy_bounds, z_bounds, data_subset):
+    def check_boundaries(self, xy_bounds, z_bounds, team_name, team_side):
+
+        # Get the subset of data for the team
+        team_data = self.data[self.data['team'] == team_name]
+
+        # Get the subset of data for the team's side
+        data_subset = team_data[team_data['side'] == team_side]
 
         # Get the boundary
         boundary = self.__calculate_boundary(xy_bounds, z_bounds)
@@ -78,10 +83,16 @@ class ProcessGameState:
 
         return num_in_bounds
 
-    def check_boundaries_with_matplotlib(self, xy_bounds, z_bounds, data):
+    def check_boundaries_with_matplotlib(self, xy_bounds, z_bounds, team_name, team_side):
+
+        # Get the subset of data for the team
+        team_data = self.data[self.data['team'] == team_name]
+
+        # Get the subset of data for the team's side
+        data_subset = team_data[team_data['side'] == team_side]
 
         # Get the list of round numbers and sort them
-        rounds = list(data['round_num'].unique())
+        rounds = list(data_subset['round_num'].unique())
         rounds.sort()
         num_rounds = len(rounds)
 
@@ -94,7 +105,7 @@ class ProcessGameState:
         # Iterate through each round
         for round in rounds:
             in_count = 0
-            curr_round = data[data['round_num'] == round]
+            curr_round = data_subset[data_subset['round_num'] == round]
 
             # Iterate through each row in the current round
             for _, row in curr_round.iterrows():
@@ -109,15 +120,17 @@ class ProcessGameState:
 
         return num_in_bounds
 
-    # def get_weapon_classes(self):
-    #     weapon_classes = set()
-    #     for _, row in self.data.iterrows():
-    #         if row['inventory'] is not None:
-    #             for weapon in row['inventory']:
-    #                 weapon_classes.add(weapon['weapon_class'])
-    #         if len(weapon_classes) == 4:
-    #             break
-    #     return weapon_classes
+    def extract_weapon_classes(self):
+        classes = []
 
+        for _, row in self.data.iterrows():
+            curr_row_classes = []
+            if row['inventory'] is not None:
+                for weapon in row['inventory']:
+                    curr_row_classes.append(weapon['weapon_class'])
+            else:
+                curr_row_classes.append('None')
 
-game_state = ProcessGameState('data/game_state_frame_data.parquet')
+            classes.append(curr_row_classes)
+
+        self.data['weapon_classes'] = classes
